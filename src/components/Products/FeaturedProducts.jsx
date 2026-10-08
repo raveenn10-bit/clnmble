@@ -1,10 +1,15 @@
 import React, { useState } from 'react';
 import ProductCard from './ProductCard';
 import { siteData } from '../../data/siteData';
-import { Sparkles, Wrench } from 'lucide-react';
+import { Sparkles, Wrench, X, Search } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 
-export default function FeaturedProducts({ selectedCategory, onSelectCategory }) {
+export default function FeaturedProducts({
+  selectedCategory,
+  onSelectCategory,
+  searchQueryFilter,
+  onClearSearch,
+}) {
   const { wishlist } = useCart();
   const [activeBrandTab, setActiveBrandTab] = useState('All');
 
@@ -12,11 +17,19 @@ export default function FeaturedProducts({ selectedCategory, onSelectCategory })
 
   let filtered = siteData.products;
 
-  // Filter based on tab or navigation category
-  if (selectedCategory === 'Wishlist') {
+  // Filter based on search query if active
+  if (searchQueryFilter && searchQueryFilter.trim().length > 0) {
+    const q = searchQueryFilter.toLowerCase();
+    filtered = filtered.filter(
+      (p) =>
+        p.title.toLowerCase().includes(q) ||
+        p.brand.toLowerCase().includes(q) ||
+        p.description.toLowerCase().includes(q)
+    );
+  } else if (selectedCategory === 'Wishlist') {
     filtered = wishlist;
   } else if (selectedCategory === 'tools') {
-    filtered = siteData.products.filter((p) => p.category === 'tools');
+    filtered = siteData.products.filter((p) => p.category === 'tools' || p.brand === '2UUL Tools');
   } else if (selectedCategory === 'Phones') {
     filtered = siteData.products.filter((p) => p.category === 'phones');
   } else if (selectedCategory === 'Tablets') {
@@ -42,6 +55,25 @@ export default function FeaturedProducts({ selectedCategory, onSelectCategory })
   return (
     <section id="products-section" className="py-10 bg-white">
       <div className="max-w-7xl mx-auto px-4">
+        {/* Search Query Banner if active */}
+        {searchQueryFilter && (
+          <div className="mb-6 p-3 bg-blue-50 border border-blue-200 rounded-2xl flex items-center justify-between text-xs text-blue-900 animate-in fade-in slide-in-from-top-1">
+            <div className="flex items-center gap-2">
+              <Search size={15} className="text-blue-600" />
+              <span>
+                Search results for: <strong className="text-blue-950">"{searchQueryFilter}"</strong> ({filtered.length} items found)
+              </span>
+            </div>
+            <button
+              onClick={onClearSearch}
+              className="flex items-center gap-1 font-bold text-blue-700 hover:text-blue-900 bg-white px-2.5 py-1 rounded-lg border border-blue-200 shadow-2xs hover:bg-blue-50 transition-colors"
+            >
+              <X size={13} />
+              <span>Clear Filter</span>
+            </button>
+          </div>
+        )}
+
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8 pb-4 border-b border-gray-100">
           <div>
@@ -59,7 +91,7 @@ export default function FeaturedProducts({ selectedCategory, onSelectCategory })
           </div>
 
           {/* Tab Filter Pills */}
-          {selectedCategory !== 'Wishlist' && (
+          {!searchQueryFilter && selectedCategory !== 'Wishlist' && (
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 max-w-full scrollbar-none">
               {tabs.map((tab) => (
                 <button
@@ -91,15 +123,20 @@ export default function FeaturedProducts({ selectedCategory, onSelectCategory })
           </div>
         ) : (
           <div className="text-center py-16 bg-gray-50 rounded-2xl border border-dashed border-gray-200 p-8">
-            <p className="text-gray-500 font-medium mb-3">No items found in this section.</p>
+            <p className="text-gray-500 font-medium mb-3">
+              {searchQueryFilter
+                ? `No items found matching "${searchQueryFilter}".`
+                : 'No items found in this section.'}
+            </p>
             <button
               onClick={() => {
+                if (onClearSearch) onClearSearch();
                 setActiveBrandTab('All');
                 if (onSelectCategory) onSelectCategory('All');
               }}
               className="bg-blue-600 text-white text-xs font-bold px-4 py-2 rounded-lg"
             >
-              View All Products
+              Reset Filters & View All
             </button>
           </div>
         )}

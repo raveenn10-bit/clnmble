@@ -11,6 +11,7 @@ import BranchesSection from './components/Showrooms/BranchesSection';
 import Footer from './components/Footer/Footer';
 import CartDrawer from './components/Cart/CartDrawer';
 import QuickViewModal from './components/Modals/QuickViewModal';
+import AuthModal from './components/Modals/AuthModal';
 import MobileBottomBar from './components/Mobile/MobileBottomBar';
 import MobileDrawer from './components/Mobile/MobileDrawer';
 import WhatsAppButton from './components/WhatsAppButton';
@@ -20,9 +21,29 @@ function MainLayout() {
   const { toastMessage } = useCart();
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [searchQueryFilter, setSearchQueryFilter] = useState('');
 
   const handleCategorySelect = (cat) => {
     setSelectedCategory(cat);
+    setSearchQueryFilter('');
+    const prodEl = document.getElementById('products-section');
+    if (prodEl) {
+      prodEl.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
+  const handleSearchSubmit = (query, cat) => {
+    setSearchQueryFilter(query);
+    if (cat === '2UUL Repair Tools') {
+      setSelectedCategory('tools');
+    } else if (cat === 'Smartphones') {
+      setSelectedCategory('Phones');
+    } else if (cat === 'Tablets') {
+      setSelectedCategory('Tablets');
+    } else {
+      setSelectedCategory('All');
+    }
     const prodEl = document.getElementById('products-section');
     if (prodEl) {
       prodEl.scrollIntoView({ behavior: 'smooth' });
@@ -30,10 +51,10 @@ function MainLayout() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-[#242424] pb-14 lg:pb-0">
-      {/* Toast Notification */}
+    <div className="min-h-screen flex flex-col bg-white text-[#0f172a] pb-14 lg:pb-0">
+      {/* Toast Notification with animation */}
       {toastMessage && (
-        <div className="fixed top-20 right-4 z-50 bg-gray-900 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-2.5 text-xs font-semibold animate-in fade-in slide-in-from-top-4 border border-gray-700">
+        <div className="fixed top-20 right-4 z-50 bg-gray-950 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-top-4 duration-200 border border-gray-800">
           <CheckCircle2 size={16} className="text-emerald-400" />
           <span>{toastMessage}</span>
         </div>
@@ -45,6 +66,8 @@ function MainLayout() {
         onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
         onCategorySelect={handleCategorySelect}
         selectedCategory={selectedCategory}
+        onOpenAuthModal={() => setIsAuthModalOpen(true)}
+        onSearchSubmit={handleSearchSubmit}
       />
 
       {/* Main Body */}
@@ -52,9 +75,11 @@ function MainLayout() {
         <HeroBanner onExplore={() => handleCategorySelect('All')} />
         <FeaturedProducts
           selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
+          onSelectCategory={handleCategorySelect}
+          searchQueryFilter={searchQueryFilter}
+          onClearSearch={() => setSearchQueryFilter('')}
         />
-        <AIFlagshipPromo onShopNow={() => handleCategorySelect('Samsung')} />
+        <AIFlagshipPromo onShopNow={() => handleCategorySelect('Phones')} />
         <BrandsGrid onBrandSelect={(brand) => handleCategorySelect(brand)} />
         <GoogleReviews />
         <BranchesSection />
@@ -66,6 +91,10 @@ function MainLayout() {
       {/* Floating Modals and Navigation */}
       <CartDrawer />
       <QuickViewModal />
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
       <MobileBottomBar
         onCategorySelect={handleCategorySelect}
         onOpenMenu={() => setIsMobileMenuOpen(true)}

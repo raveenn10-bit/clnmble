@@ -13,18 +13,84 @@ import {
   Wrench,
   Check,
   X,
-  Phone
+  Phone,
+  ArrowRight,
+  Sparkles
 } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { siteData } from '../../data/siteData';
 
-export default function Navbar({ onOpenMobileMenu, onCategorySelect, selectedCategory }) {
-  const { cartCount, cartTotal, formatLKR, setIsCartOpen, wishlist } = useCart();
+export default function Navbar({
+  onOpenMobileMenu,
+  onCategorySelect,
+  selectedCategory,
+  onOpenAuthModal,
+  onSearchSubmit,
+}) {
+  const { cartCount, cartTotal, formatLKR, setIsCartOpen, wishlist, setQuickViewProduct } = useCart();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSearchCat, setSelectedSearchCat] = useState('All Categories');
   const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
   const [isCategoryMenuOpen, setIsCategoryMenuOpen] = useState(false);
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [cartWiggle, setCartWiggle] = useState(false);
+
   const catRef = useRef(null);
+  const searchContainerRef = useRef(null);
+
+  // Trigger subtle wiggle on cart count change
+  useEffect(() => {
+    if (cartCount > 0) {
+      setCartWiggle(true);
+      const timer = setTimeout(() => setCartWiggle(false), 600);
+      return () => clearTimeout(timer);
+    }
+  }, [cartCount]);
+
+  // Live search filtering
+  const matchingProducts = searchQuery.trim().length > 0
+    ? siteData.products.filter((p) => {
+        const query = searchQuery.toLowerCase();
+        const matchesCategory =
+          selectedSearchCat === 'All Categories' ||
+          (selectedSearchCat === 'Smartphones' && p.category === 'phones') ||
+          (selectedSearchCat === '2UUL Repair Tools' && (p.category === 'tools' || p.brand === '2UUL Tools')) ||
+          (selectedSearchCat === 'Tablets' && p.category === 'tablets');
+
+        const matchesText =
+          p.title.toLowerCase().includes(query) ||
+          p.brand.toLowerCase().includes(query) ||
+          p.description.toLowerCase().includes(query);
+
+        return matchesCategory && matchesText;
+      })
+    : [];
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (catRef.current && !catRef.current.contains(e.target)) {
+        setIsCatDropdownOpen(false);
+      }
+      if (searchContainerRef.current && !searchContainerRef.current.contains(e.target)) {
+        setIsSearchFocused(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSearchExecute = (e) => {
+    if (e) e.preventDefault();
+    if (onSearchSubmit) {
+      onSearchSubmit(searchQuery, selectedSearchCat);
+    } else {
+      onCategorySelect('All');
+    }
+    setIsSearchFocused(false);
+    const el = document.getElementById('products-section');
+    if (el) el.scrollIntoView({ behavior: 'smooth' });
+  };
 
   const phoneBrands = [
     'Samsung', 'Xiaomi', 'Redmi', 'Honor', 'Apple', 'Vivo', 'Oppo',
@@ -36,37 +102,25 @@ export default function Navbar({ onOpenMobileMenu, onCategorySelect, selectedCat
     '2UUL Desktop Charging Station', '2UUL The One Jig', 'Universal PCB Fixtures'
   ];
 
-  useEffect(() => {
-    function handleClickOutside(e) {
-      if (catRef.current && !catRef.current.contains(e.target)) {
-        setIsCatDropdownOpen(false);
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
   return (
-    <header className="sticky top-0 z-40 bg-white shadow-sm border-b border-gray-100">
+    <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-sm border-b border-gray-100 transition-all">
       {/* Main Bar */}
-      <div className="max-w-7xl mx-auto px-4 py-3.5 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-3 sm:gap-4">
         {/* Mobile Hamburger & Logo */}
         <div className="flex items-center gap-3">
           <button
             onClick={onOpenMobileMenu}
-            className="lg:hidden p-2 text-gray-700 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+            className="lg:hidden p-2 text-gray-700 hover:text-blue-700 hover:bg-blue-50 rounded-xl transition-all active:scale-95"
             aria-label="Open mobile menu"
           >
             <Menu size={24} />
           </button>
 
-          {/* Logo (Recreating the Digitel Phone Market Facebook Brand Logo) */}
+          {/* Logo (Digitel Phone Market Galle) */}
           <a href="#" className="flex items-center gap-2.5 group">
-            <div className="relative w-11 h-11 rounded-full bg-gradient-to-tr from-blue-900 via-blue-700 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-700/20 p-2 border-2 border-white">
-              {/* Handset Icon */}
-              <Phone size={22} className="rotate-12 fill-white stroke-white" />
-              {/* Active Green Dot matching FB logo */}
-              <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm"></span>
+            <div className="relative w-11 h-11 rounded-full bg-gradient-to-tr from-blue-900 via-blue-700 to-indigo-600 flex items-center justify-center text-white shadow-md shadow-blue-700/20 p-2 border-2 border-white transition-transform group-hover:scale-105 duration-300">
+              <Phone size={21} className="rotate-12 fill-white stroke-white" />
+              <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm animate-pulse"></span>
             </div>
 
             <div>
@@ -78,30 +132,45 @@ export default function Navbar({ onOpenMobileMenu, onCategorySelect, selectedCat
                   Phone Market
                 </span>
               </div>
-              <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider block mt-0.5">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mt-0.5">
                 Wholesale Dealers in Galle
               </span>
             </div>
           </a>
         </div>
 
-        {/* Search Bar */}
-        <div className="hidden md:flex flex-1 max-w-2xl mx-4">
-          <div className="flex w-full border-2 border-blue-600 rounded-full overflow-hidden focus-within:ring-2 focus-within:ring-blue-600/30 bg-white shadow-xs">
+        {/* Search Bar - Pixel-perfect WoodMart pill with live search & smooth animations */}
+        <div className="hidden md:flex flex-1 max-w-2xl mx-2 relative" ref={searchContainerRef}>
+          <form
+            onSubmit={handleSearchExecute}
+            className={`flex w-full items-center bg-white border-2 rounded-full transition-all duration-300 shadow-xs ${
+              isSearchFocused
+                ? 'border-blue-600 ring-4 ring-blue-600/15 shadow-md'
+                : 'border-blue-500 hover:border-blue-600'
+            }`}
+          >
             {/* Category Dropdown */}
             <div className="relative" ref={catRef}>
               <button
                 type="button"
                 onClick={() => setIsCatDropdownOpen(!isCatDropdownOpen)}
-                className="h-full px-3.5 bg-gray-50 hover:bg-gray-100 text-xs font-medium text-gray-700 border-r border-gray-200 flex items-center gap-1 whitespace-nowrap transition-colors"
+                className="h-10.5 px-4 bg-gray-50/80 hover:bg-gray-100 text-xs font-semibold text-gray-700 border-r border-gray-200 rounded-l-full flex items-center gap-1.5 whitespace-nowrap transition-colors"
               >
                 <span>{selectedSearchCat}</span>
-                <ChevronDown size={14} className="text-gray-500" />
+                <ChevronDown
+                  size={14}
+                  className={`text-gray-500 transition-transform duration-200 ${
+                    isCatDropdownOpen ? 'rotate-180 text-blue-600' : ''
+                  }`}
+                />
               </button>
 
               {isCatDropdownOpen && (
-                <div className="absolute left-0 mt-1 w-56 bg-white rounded-lg shadow-xl border border-gray-100 py-1.5 z-50 text-xs">
-                  {['All Categories', 'Smartphones', '2UUL Repair Tools', 'Tablets', 'Wholesale Packs', 'Original Accessories'].map((cat) => (
+                <div className="absolute left-0 mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-gray-100 py-2 z-50 text-xs animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-1 text-[10px] font-bold uppercase text-gray-400 tracking-wider">
+                    Search Within
+                  </div>
+                  {['All Categories', 'Smartphones', '2UUL Repair Tools', 'Tablets', 'Original Accessories'].map((cat) => (
                     <button
                       key={cat}
                       type="button"
@@ -109,9 +178,9 @@ export default function Navbar({ onOpenMobileMenu, onCategorySelect, selectedCat
                         setSelectedSearchCat(cat);
                         setIsCatDropdownOpen(false);
                       }}
-                      className="w-full text-left px-3 py-1.5 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between"
+                      className="w-full text-left px-3.5 py-2 hover:bg-blue-50 hover:text-blue-700 flex items-center justify-between font-medium transition-colors"
                     >
-                      {cat}
+                      <span>{cat}</span>
                       {selectedSearchCat === cat && <Check size={14} className="text-blue-600" />}
                     </button>
                   ))}
@@ -119,76 +188,192 @@ export default function Navbar({ onOpenMobileMenu, onCategorySelect, selectedCat
               )}
             </div>
 
-            {/* Input */}
+            {/* Search Input */}
             <input
               type="text"
               value={searchQuery}
+              onFocus={() => setIsSearchFocused(true)}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search phones, 2UUL repair tools, displays, accessories..."
-              className="flex-1 px-4 py-2.5 text-xs text-gray-800 placeholder-gray-400 focus:outline-none"
+              className="flex-1 px-4 py-2.5 text-xs text-gray-800 placeholder-gray-400 bg-transparent focus:outline-none"
             />
 
+            {/* Clear Button */}
             {searchQuery && (
               <button
+                type="button"
                 onClick={() => setSearchQuery('')}
-                className="px-2 text-gray-400 hover:text-gray-600"
+                className="p-1.5 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100 transition-colors mr-1"
+                title="Clear search"
               >
-                <X size={16} />
+                <X size={15} />
               </button>
             )}
 
-            {/* Submit */}
+            {/* Submit Button */}
             <button
-              type="button"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-5 flex items-center justify-center transition-colors"
+              type="submit"
+              className="bg-blue-600 hover:bg-blue-700 text-white h-10.5 px-5.5 rounded-r-full flex items-center justify-center transition-all duration-200 active:scale-95 shadow-sm hover:shadow"
               aria-label="Search"
             >
-              <Search size={18} />
+              <Search size={18} className="transition-transform duration-200 group-hover:scale-110" />
             </button>
-          </div>
+          </form>
+
+          {/* Live Search Results Animated Dropdown */}
+          {isSearchFocused && searchQuery.trim().length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="p-3 bg-gray-50 border-b border-gray-100 flex items-center justify-between text-xs">
+                <span className="font-bold text-gray-600">
+                  {matchingProducts.length > 0
+                    ? `Found ${matchingProducts.length} matching products:`
+                    : 'No direct match found'}
+                </span>
+                <span className="text-[11px] text-gray-400">Press Enter to view all</span>
+              </div>
+
+              <div className="max-h-80 overflow-y-auto divide-y divide-gray-50">
+                {matchingProducts.length > 0 ? (
+                  matchingProducts.map((prod) => (
+                    <div
+                      key={prod.id}
+                      onClick={() => {
+                        setQuickViewProduct(prod);
+                        setIsSearchFocused(false);
+                      }}
+                      className="p-3 hover:bg-blue-50/70 cursor-pointer flex items-center justify-between gap-3 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <img
+                          src={prod.image}
+                          alt={prod.title}
+                          className="w-11 h-11 object-contain rounded-lg bg-gray-50 p-1 border border-gray-200 shrink-0"
+                          onError={(e) => {
+                            e.currentTarget.src = prod.fallbackImage;
+                          }}
+                        />
+                        <div className="min-w-0">
+                          <h4 className="text-xs font-bold text-gray-900 group-hover:text-blue-700 transition-colors truncate">
+                            {prod.title}
+                          </h4>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[10px] font-bold text-blue-600 uppercase">
+                              {prod.brand}
+                            </span>
+                            <span className="text-[10px] text-emerald-600 font-semibold">
+                              • {prod.stock}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-right shrink-0">
+                        <div className="text-xs font-extrabold text-blue-700">
+                          {formatLKR(prod.price)}
+                        </div>
+                        <span className="text-[10px] text-gray-400 group-hover:text-blue-600 font-medium flex items-center justify-end gap-1">
+                          Quick View <ArrowRight size={10} />
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-6 text-center text-xs text-gray-500 space-y-2">
+                    <p>No products matching "{searchQuery}"</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSearchQuery('');
+                        setIsSearchFocused(false);
+                        onCategorySelect('All');
+                      }}
+                      className="text-blue-600 font-bold hover:underline"
+                    >
+                      Browse full catalog
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {matchingProducts.length > 0 && (
+                <div className="p-2.5 bg-gray-50/90 border-t border-gray-100 text-center">
+                  <button
+                    type="button"
+                    onClick={handleSearchExecute}
+                    className="text-xs font-bold text-blue-600 hover:text-blue-800 transition-colors inline-flex items-center gap-1"
+                  >
+                    <span>View all matching results in catalog</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
-        {/* Right Actions: Account, Wishlist, Cart */}
-        <div className="flex items-center gap-4 text-gray-700">
-          {/* User Account */}
-          <div className="hidden lg:flex items-center gap-2 hover:text-blue-700 cursor-pointer transition-colors">
-            <div className="w-9 h-9 rounded-full bg-blue-50 flex items-center justify-center text-blue-700">
+        {/* Right Actions: Account, Wishlist, Cart - Cohesive, Harmonious & Animated */}
+        <div className="flex items-center gap-2.5 sm:gap-3 text-gray-700">
+          {/* User Account Button with Hover Pulse */}
+          <button
+            onClick={onOpenAuthModal}
+            className="hidden lg:flex items-center gap-2.5 p-1.5 pr-3 rounded-full hover:bg-blue-50 hover:text-blue-700 cursor-pointer transition-all duration-200 border border-transparent hover:border-blue-100 group"
+            title="Open Wholesale & Retail Account"
+          >
+            <div className="w-9 h-9 rounded-full bg-blue-50 text-blue-700 flex items-center justify-center transition-transform group-hover:scale-105 group-hover:bg-blue-600 group-hover:text-white shadow-xs">
               <User size={18} />
             </div>
             <div className="text-left text-xs leading-tight">
-              <div className="text-gray-400 text-[10px]">Wholesale / Retail</div>
-              <div className="font-bold text-gray-800">My Account</div>
+              <div className="text-gray-400 text-[10px] font-medium">Wholesale / Retail</div>
+              <div className="font-bold text-gray-800 group-hover:text-blue-700 transition-colors">
+                My Account
+              </div>
             </div>
-          </div>
+          </button>
 
-          {/* Wishlist */}
-          <div
+          {/* Wishlist Button with Counter and Hover Scale */}
+          <button
             onClick={() => onCategorySelect('Wishlist')}
-            className="relative cursor-pointer hover:text-blue-700 transition-colors p-1"
+            className="relative p-2.5 rounded-full hover:bg-red-50 hover:text-red-600 transition-all duration-200 cursor-pointer border border-transparent hover:border-red-100 group active:scale-90"
             title="View Wishlist"
           >
-            <Heart size={22} className={wishlist.length > 0 ? 'text-red-500 fill-red-500' : ''} />
+            <Heart
+              size={22}
+              className={`transition-transform duration-200 group-hover:scale-110 ${
+                wishlist.length > 0 ? 'text-red-500 fill-red-500' : 'text-gray-700'
+              }`}
+            />
             {wishlist.length > 0 && (
-              <span className="absolute -top-1 -right-2 bg-blue-600 text-white rounded-full text-[10px] w-4 h-4 flex items-center justify-center font-bold">
+              <span className="absolute top-1 right-1 bg-red-500 text-white rounded-full text-[10px] w-4 h-4 flex items-center justify-center font-bold shadow-sm animate-badge-pop">
                 {wishlist.length}
               </span>
             )}
-          </div>
+          </button>
 
-          {/* Cart Icon & Total */}
+          {/* Wholesale Cart Pill Button with Animated Badge */}
           <button
             onClick={() => setIsCartOpen(true)}
-            className="flex items-center gap-2.5 bg-blue-50/70 hover:bg-blue-100 text-gray-800 hover:text-blue-800 p-2 rounded-xl transition-all border border-blue-200/60 group"
+            className={`flex items-center gap-2.5 bg-blue-50/70 hover:bg-blue-100/90 text-gray-800 hover:text-blue-800 p-2 sm:px-3 sm:py-2 rounded-2xl transition-all duration-300 border border-blue-200/80 shadow-xs hover:shadow-md hover:border-blue-400 group active:scale-95 ${
+              cartWiggle ? 'animate-cart-wiggle' : ''
+            }`}
           >
             <div className="relative">
-              <ShoppingCart size={22} className="text-blue-700 transition-colors" />
-              <span className="absolute -top-2 -right-2 bg-blue-600 text-white rounded-full text-[10px] w-4 h-4 flex items-center justify-center font-bold shadow-sm">
+              <ShoppingCart
+                size={22}
+                className="text-blue-700 transition-transform duration-200 group-hover:scale-110"
+              />
+              <span
+                className={`absolute -top-2.5 -right-2.5 bg-blue-600 text-white rounded-full text-[10px] w-4.5 h-4.5 flex items-center justify-center font-black shadow-sm border border-white ${
+                  cartWiggle ? 'animate-badge-pop' : ''
+                }`}
+              >
                 {cartCount}
               </span>
             </div>
             <div className="hidden sm:block text-left text-xs leading-tight">
-              <div className="text-gray-500 text-[10px] uppercase font-semibold">Wholesale Cart</div>
-              <div className="font-extrabold text-gray-900 group-hover:text-blue-700 transition-colors">
+              <div className="text-gray-500 text-[10px] uppercase font-bold tracking-tight">
+                Wholesale Cart
+              </div>
+              <div className="font-black text-gray-950 group-hover:text-blue-700 transition-colors">
                 {formatLKR(cartTotal)}
               </div>
             </div>
@@ -207,7 +392,12 @@ export default function Navbar({ onOpenMobileMenu, onCategorySelect, selectedCat
             >
               <Menu size={16} />
               <span>Browse Catalog</span>
-              <ChevronDown size={14} className={`transition-transform duration-200 ${isCategoryMenuOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                size={14}
+                className={`transition-transform duration-200 ${
+                  isCategoryMenuOpen ? 'rotate-180' : ''
+                }`}
+              />
             </button>
 
             {/* Categories Dropdown Mega Menu */}
@@ -320,7 +510,7 @@ export default function Navbar({ onOpenMobileMenu, onCategorySelect, selectedCat
               onClick={() => onCategorySelect('Special Offers')}
               className="py-3 text-blue-700 hover:text-blue-800 flex items-center gap-1 font-extrabold transition-colors"
             >
-              <Flame size={14} className="fill-blue-600" />
+              <Flame size={14} className="fill-blue-600 animate-pulse" />
               Wholesale Deals
             </button>
           </nav>
